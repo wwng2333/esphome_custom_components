@@ -1,6 +1,10 @@
 ```yaml
 # example configuration:
 
+external_components:
+  - source: github://wwng2333/esphome_custom_components
+    components: [ pm2008 ]
+
 sensor:
   - platform: pm2008
     id: pm25sensor
