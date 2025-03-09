@@ -82,7 +82,7 @@ optional<bool> SY210Component::check_byte_() const {
 }
 
 void SY210Component::parse_data_() {
-  const int pm_2_5_concentration = this->get_16_bit_uint_(6);
+  const int pm_2_5_concentration = this->get_16_bit_uint_(2);
 
   if (this->pm_2_5_sensor_ != nullptr) {
     this->pm_2_5_sensor_->publish_state(pm_2_5_concentration);
