@@ -64,11 +64,11 @@ optional<bool> SY210Component::check_byte_() const {
     return byte == SY210_RESPONSE_HEADER[index];
   }
   // 接收0..5个字节
-  if (index < (sizeof(SY210_RESPONSE_HEADER) + 3))
+  if (index < (sizeof(SY210_RESPONSE_HEADER) + 2))
     return true;
 
   // 共接收了5个字节，开始计算checksum
-  if (index == (sizeof(SY210_RESPONSE_HEADER) + 3)) {
+  if (index == (sizeof(SY210_RESPONSE_HEADER) + 2)) {
     uint16_t checksum = sy210_checksum_(this->data_, sizeof(SY210_RESPONSE_HEADER) + 3);
     // 与接收到的checksum做对比
     if (checksum != 0x100) {
