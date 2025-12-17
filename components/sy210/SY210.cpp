@@ -71,7 +71,7 @@ optional<bool> SY210Component::check_byte_() const {
   if (index == (sizeof(SY210_RESPONSE_HEADER) + 2)) {
     uint16_t checksum = sy210_checksum_(this->data_, sizeof(SY210_RESPONSE_HEADER) + 3);
     // 与接收到的checksum做对比
-    if (checksum != 0x100) {
+    if ((checksum & 0xFF) != 0) {
       ESP_LOGW(TAG, "SY210 checksum is wrong: %04x, expected zero", checksum);
       return false;
     }
