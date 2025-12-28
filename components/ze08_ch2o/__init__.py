@@ -6,19 +6,26 @@ from esphome.const import CONF_ID, CONF_UART_ID
 DEPENDENCIES = ['uart']
 AUTO_LOAD = ['sensor']
 
+# 定义命名空间
 ze08_ch2o_ns = cg.esphome_ns.namespace('ze08_ch2o')
-ZE08CH2OSensor = ze08_ch2o_ns.class_('ZE08CH2OSensor', cg.PollingComponent, uart.UARTDevice)
+
+# 修改点 1: 将 cg.PollingComponent 改为 cg.Component
+# 这告诉代码生成器，C++ 类继承自 Component 而非轮询类
+ZE08CH2OSensor = ze08_ch2o_ns.class_('ZE08CH2OSensor', cg.Component, uart.UARTDevice)
 
 CONF_ZE08_ID = 'ze08_ch2o_id'
 
-CONFIG_SCHEMA = cv.Schema({
+# 修改点 2: 将 cv.polling_component_schema('5s') 改为 cv.COMPONENT_SCHEMA
+# 这样会移除 YAML 中对 update_interval 的强制要求，并防止生成 set_update_interval 调用
+CONFIG_SCHEMA = cv.COMPONENT_SCHEMA.extend({
     cv.GenerateID(): cv.declare_id(ZE08CH2OSensor),
     cv.Required(CONF_UART_ID): cv.use_id(uart.UARTComponent),
-}).extend(cv.polling_component_schema('5s'))
+})
 
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
+    # 注册组件，现在它会作为普通 Component 注册
     await cg.register_component(var, config)
     
-    uart_component = await cg.get_variable(config[CONF_UART_ID])
-    cg.add(var.set_uart_parent(uart_component))
+    # 注册 UART 设备
+    await uart.register_uart_device(var, config)
