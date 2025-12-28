@@ -11,12 +11,12 @@ external_components:
 
 ze08_ch2o:
   uart_id: uart_ze08
-  update_interval: 5s
 
 sensor:
   - platform: ze08_ch2o
     formaldehyde:
       name: "Formaldehyde sensor"
 ```
+
 
 Source code from https://github.com/haplm/winsen_ze08_ch2o
