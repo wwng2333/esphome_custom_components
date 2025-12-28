@@ -32,32 +32,42 @@ class ZE08CH2OSensor : public PollingComponent, public uart::UARTDevice {
   }
   
   void update() override {
-    write_array(ZE08_QUESTION, sizeof(ZE08_QUESTION));
-    
-    unsigned char buf[9];
-    
-    if (this->available() != sizeof(buf)) {
-        ESP_LOGE(TAG, "Bad response from ZE08! received %d bytes.", this->available());
-        return;
-    }
-    
-    if (!read_array(buf, sizeof(buf))) {
-      ESP_LOGE(TAG, "Error reading from ZE08!");
-      return;
-    }
+      // 1. 发送查询指令（如果你确定要用 QA 模式）
+      write_array(ZE08_QUESTION, sizeof(ZE08_QUESTION));
+      
+      // 给传感器一点响应时间
+      delay(50); 
 
-    unsigned short concentration_ugm3 = (buf[2] << 8) | buf[3];
-    unsigned short concentration_ppb = (buf[6] << 8) | buf[7];
-    
-    ESP_LOGD(TAG, "Received %u %u", concentration_ugm3, concentration_ppb);
+      // 2. 循环检查缓冲区
+      while (this->available() >= 9) {
+          if (this->read() == 0xFF) { // 找到起始位
+              unsigned char buf[9];
+              buf[0] = 0xFF;
+              if (this->read_array(&buf[1], 8)) {
+                  // 3. 校验和检查
+                  unsigned char checksum_calc = ~(buf[1] + buf[2] + buf[3] + buf[4] + buf[5] + buf[6] + buf[7]) + 1;
+                  if (buf[8] != checksum_calc) {
+                      ESP_LOGE(TAG, "Bad checksum! %02X != %02X", buf[8], checksum_calc);
+                      continue; // 校验失败，继续找下一个 0xFF
+                  }
 
-    unsigned char checksum_calc = ~(buf[1] + buf[2] + buf[3] + buf[4] + buf[5] + buf[6] + buf[7]) + 1;
-    if (buf[8] != checksum_calc) {
-        ESP_LOGE(TAG, "Bad checksum from ZE08! received %d != %d.", buf[8], checksum_calc);
-    }
+                  // 4. 解析数据
+                  unsigned short concentration_ppb = (buf[6] << 8) | buf[7];
+                  ESP_LOGD(TAG, "Formaldehyde Concentration: %u ppb", concentration_ppb);
 
-    if (this->ch2o_ppb_ != nullptr)
-      this->ch2o_ppb_->publish_state(concentration_ppb);
+                  if (this->ch2o_ppb_ != nullptr) {
+                      this->ch2o_ppb_->publish_state(concentration_ppb);
+                  }
+                  
+                  // 读取成功后，建议清空当前缓冲区剩余的旧数据，防止干扰下次读取
+                  while(this->available() > 0) this->read();
+                  return; 
+              }
+          }
+      }
+      
+      // 如果运行到这里，说明没有找到完整合法的数据包
+      ESP_LOGW(TAG, "No valid packet found in UART buffer. Available: %d bytes", this->available());
   }
 
  protected:
